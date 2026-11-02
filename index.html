@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard BDM PT MIG - Monitoring Biaya Dimuka</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3 mb-2 md:mb-0">
+                <div class="bg-blue-600 p-2.5 rounded-lg text-white shadow-lg">
+                    <i class="fa-solid fa-chart-pie text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">Dashboard BDM PT MIG</h1>
+                    <p class="text-xs text-slate-400">Monitoring Biaya Dimuka & Status Keterangan Pekerjaan</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow flex items-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Export CSV</span>
+                </button>
+                <div class="bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
+                    <i class="fa-regular fa-calendar-days mr-1.5 text-blue-400"></i> Update 2026
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full space-y-8">
+
+        <!-- Top KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Total Item Pekerjaan</p>
+                    <h3 id="kpi-total-item" class="text-2xl font-bold text-slate-900">0</h3>
+                    <span class="text-xs text-emerald-600 font-medium mt-1 inline-block"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Data Terverifikasi</span>
+                </div>
+                <div class="bg-blue-50 text-blue-600 p-4 rounded-xl">
+                    <i class="fa-solid fa-briefcase text-2xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Total Nilai Biaya Dimuka</p>
+                    <h3 id="kpi-total-nilai" class="text-xl font-bold text-slate-900">Rp 0</h3>
+                    <span class="text-xs text-blue-600 font-medium mt-1 inline-block"><i class="fa-solid fa-wallet mr-1"></i> Akumulasi Keseluruhan</span>
+                </div>
+                <div class="bg-emerald-50 text-emerald-600 p-4 rounded-xl">
+                    <i class="fa-solid fa-money-bill-wave text-2xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">On Going</p>
+                    <h3 id="kpi-ongoing" class="text-2xl font-bold text-slate-900">0</h3>
+                    <span class="text-xs text-amber-600 font-medium mt-1 inline-block"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Item Berjalan</span>
+                </div>
+                <div class="bg-amber-50 text-amber-600 p-4 rounded-xl">
+                    <i class="fa-solid fa-spinner text-2xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Menunggu Tera Ulang</p>
+                    <h3 id="kpi-tera" class="text-2xl font-bold text-slate-900">0</h3>
+                    <span class="text-xs text-indigo-600 font-medium mt-1 inline-block"><i class="fa-solid fa-circle-check mr-1"></i> Sesi Selesai</span>
+                </div>
+                <div class="bg-indigo-50 text-indigo-600 p-4 rounded-xl">
+                    <i class="fa-solid fa-clock text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Bar Chart: Nilai per Keterangan -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base font-bold text-slate-900"><i class="fa-solid fa-chart-bar text-blue-600 mr-2"></i> Total Nilai Berdasarkan Keterangan</h3>
+                </div>
+                <div class="relative flex-grow h-80">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Doughnut Chart: Jumlah Item per Keterangan -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base font-bold text-slate-900"><i class="fa-solid fa-chart-pie text-emerald-600 mr-2"></i> Proporsi Jumlah Item per Keterangan</h3>
+                </div>
+                <div class="relative flex-grow h-80 flex justify-center items-center">
+                    <canvas id="doughnutChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">Detail Data Biaya Dimuka PT MIG</h3>
+                    <p class="text-xs text-slate-500">Gunakan filter di bawah untuk menelusuri data spesifik dengan cepat.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <!-- Search Input -->
+                    <div class="relative flex-grow md:w-64">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        </span>
+                        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari uraian pekerjaan..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <!-- Filter KET Dropdown -->
+                    <div class="w-full md:w-52">
+                        <select id="ketFilter" onchange="filterTable()" class="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Semua Keterangan</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto max-h-[500px]">
+                <table id="dataTable" class="w-full text-left border-collapse">
+                    <thead class="bg-slate-100 text-slate-700 uppercase text-[10px] font-bold tracking-wider sticky top-0 z-10">
+                        <tr>
+                            <th class="py-3 px-4 text-center">No</th>
+                            <th class="py-3 px-4">No SPK</th>
+                            <th class="py-3 px-4">Uraian Pekerjaan</th>
+                            <th class="py-3 px-4">Bagian</th>
+                            <th class="py-3 px-4 text-right">Nilai (Rp)</th>
+                            <th class="py-3 px-4 text-center">Bulan</th>
+                            <th class="py-3 px-4 text-center">Tahun</th>
+                            <th class="py-3 px-4">Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs text-slate-600" id="tableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Footer / Pagination info -->
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+                <span id="tableInfo">Menampilkan semua data</span>
+                <span class="font-medium">Dashboard BDM PT MIG 2026</span>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-6 mt-12 text-center text-xs">
+        <p>&copy; 2026 Dashboard BDM PT MIG. All Rights Reserved. Standalone Interactive Web App.</p>
+    </footer>
+
+    <!-- JavaScript Data and Logic -->
+    <script>
+        const rawData = [{"no": 1, "spk": "-", "uraian": "Pembelian Barang Informa", "bagian": "MA IV", "nilai": 24815911.0, "bulan": "Mei", "tahun": 2026, "ket": "Mau digabung sama Renovasi via KPU"}, {"no": 2, "spk": "-", "uraian": "Pembelian Barang Regulator MA IV", "bagian": "MA IV", "nilai": 10319820.0, "bulan": "April", "tahun": 2026, "ket": "Mau digabung sama Renovasi via KPU"}, {"no": 3, "spk": "-", "uraian": "DP Pembelian Oring Seal Actuator", "bagian": "PS", "nilai": 36000000.0, "bulan": "Sept", "tahun": 2026, "ket": "Menunggu Paket Padi"}, {"no": 4, "spk": "-", "uraian": "DP Pembelian Oring Seal Actuator", "bagian": "PS", "nilai": 36000000.0, "bulan": "Sept", "tahun": 2026, "ket": "Menunggu Paket Padi"}, {"no": 5, "spk": "4500073364", "uraian": "DP Pembelian barang Panel LBS", "bagian": "MPS", "nilai": 215596000.0, "bulan": "Februari", "tahun": 2026, "ket": "Menunggu Pekerjaan Instalasi PLN"}, {"no": 6, "spk": "4500073364", "uraian": "Pelunasan Pembelian barang Panel LBS", "bagian": "MPS", "nilai": 215596000.0, "bulan": "Mei", "tahun": 2026, "ket": "Menunggu Pekerjaan Instalasi PLN"}, {"no": 7, "spk": "VSO-2026-06-12-770025582", "uraian": "Kalibrasi Thermoprobe", "bagian": "OM", "nilai": 9500000.0, "bulan": "Juli", "tahun": 2026, "ket": "Menunggu Tera Ulang Sesi 2"}, {"no": 8, "spk": "VSO-2026-06-12-770025582", "uraian": "Kalibrasi Thermoprobe", "bagian": "OM", "nilai": 2150000.0, "bulan": "Juli", "tahun": 2026, "ket": "Menunggu Tera Ulang Sesi 2"}, {"no": 9, "spk": "VSO-2026-06-12-770025582", "uraian": "Kalibrasi thermoprobe", "bagian": "OM", "nilai": 2150000.0, "bulan": "Juni", "tahun": 2026, "ket": "Menunggu Tera Ulang Sesi 2"}, {"no": 10, "spk": "VSO-2026-06-12-770025582", "uraian": "Pengambilan Tera Ulang Depth Tape", "bagian": "OM", "nilai": 1470000.0, "bulan": "Juni", "tahun": 2026, "ket": "Menunggu Tera Ulang Sesi 2"}, {"no": 11, "spk": "VSO-2026-06-12-770025582", "uraian": "Pengantaran Thermprobe", "bagian": "OM", "nilai": 2150000.0, "bulan": "Juli", "tahun": 2026, "ket": "Menunggu Tera Ulang Sesi 2"}, {"no": 12, "spk": "VSO-2026-06-12-770025582", "uraian": "Tera Ulang Deph Tape Tahap 1", "bagian": "OM", "nilai": 1750000.0, "bulan": "Juni", "tahun": 2026, "ket": "Menunggu Tera Ulang Sesi 2"}, {"no": 13, "spk": "VSO-2026-06-12-770025582", "uraian": "Tera Ulang Deph Tape Tahap 2", "bagian": "OM", "nilai": 1750000.0, "bulan": "Juni", "tahun": 2026, "ket": "Menunggu Tera Ulang Sesi 2"}, {"no": 14, "spk": "VSO-2026-06-12-770025582", "uraian": "Tera Ulang Deph Tape Tahap 3", "bagian": "OM", "nilai": 1750000.0, "bulan": "Juni", "tahun": 2026, "ket": "Menunggu Tera Ulang Sesi 2"}, {"no": 15, "spk": "VSO-2026-06-12-770025582", "uraian": "Tera Ulang Depth Tape", "bagian": "OM", "nilai": 1470000.0, "bulan": "Juni", "tahun": 2026, "ket": "Menunggu Tera Ulang Sesi 2"}, {"no": 16, "spk": "335/PPNKI1100/2026", "uraian": "Biaya MCU Proper", "bagian": "Environment", "nilai": 3586500.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}, {"no": 17, "spk": "4650005096", "uraian": "Biaya MCU RKAP Civil", "bagian": "PS", "nilai": 4782000.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}, {"no": 18, "spk": "4650005096", "uraian": "Biaya MCU Siti Anita", "bagian": "PS", "nilai": 1195500.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}, {"no": 19, "spk": "VSO-2026-09-28-990447602", "uraian": "DP Pembuatan Desain Ruang Manager Engdev", "bagian": "Project Eng", "nilai": 8568000.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}, {"no": 20, "spk": "169/PPNKI1100/2026-S7", "uraian": "Kegiatan SebusePro", "bagian": "health", "nilai": 250000000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 21, "spk": "-", "uraian": "MCU Pekerja PMPDM MA I Electrical Instrument", "bagian": "MA I", "nilai": 1891000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 22, "spk": "351/PPNKI1100/2026", "uraian": "MCU Pekerja Pembuatan Billboard", "bagian": "Safety", "nilai": 8368500.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 23, "spk": "345/PPNKI1100/2026", "uraian": "MCU Pekerja Pembuatan Safety Communication Tools", "bagian": "Safety", "nilai": 3586500.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 24, "spk": "VSO-2026-09-25-952636593", "uraian": "MCU Pekerja Perbaikan Ruang Kerja", "bagian": "HSC", "nilai": 10759500.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 25, "spk": "335/PPNKI1100/2026", "uraian": "MCU Pekerja Proper", "bagian": "Environment", "nilai": 1195500.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 26, "spk": "VSO-2026-09-22-062574613", "uraian": "MCU Pekerja Renovasi Fire", "bagian": "Emergency & Insurance", "nilai": 5977500.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 27, "spk": "VSO-2026-09-22-062574613", "uraian": "MCU Pekerja Renovasi Fire", "bagian": "Emergency & Insurance", "nilai": 1195500.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 28, "spk": "-", "uraian": "MCU Pekerjan PMPDM MA I Electrical Instrument", "bagian": "MA I", "nilai": 2391000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 29, "spk": "-", "uraian": "MCU Pekerjan PMPDM MA I Electrical Instrument", "bagian": "MA I", "nilai": 2891000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 30, "spk": "-", "uraian": "MCU Pekerjan PMPDM MA I Electrical Instrument", "bagian": "MA I", "nilai": 2391000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 31, "spk": "300121746", "uraian": "MCU pekerja Reviewer CO", "bagian": "CO", "nilai": 3586500.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 32, "spk": "-", "uraian": "Mob demob Pembelian HMI Omron", "bagian": "PS", "nilai": 2150000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 33, "spk": "-", "uraian": "Pemasangan Backdrop PS", "bagian": "PS", "nilai": 32090000.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}, {"no": 34, "spk": "-", "uraian": "Pemasangan Backdrop Ruang Kreasi", "bagian": "PS", "nilai": 82034402.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}, {"no": 35, "spk": "-", "uraian": "Pemasangan Pintu dan jendela", "bagian": "PS", "nilai": 76200000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 36, "spk": "-", "uraian": "Pemasangan Plafon", "bagian": "PS", "nilai": 53671880.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 37, "spk": "-", "uraian": "Pembelian 1 Set Accessories Alat Fitnes", "bagian": "health", "nilai": 9769000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 38, "spk": "351/PPNKI1100/2026", "uraian": "Pembelian Billboard HSSE", "bagian": "Safety", "nilai": 112057500.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}, {"no": 39, "spk": "-", "uraian": "Pembelian HMI Omron", "bagian": "PS", "nilai": 50051000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 40, "spk": "VSO-2026-09-25-177040924", "uraian": "Pembelian Ornamen DCS", "bagian": "HSC", "nilai": 4550000.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 41, "spk": "-", "uraian": "Pembelian Philips Headlamp", "bagian": "Safety", "nilai": 3603050.0, "bulan": "Okt", "tahun": 2026, "ket": "On Going"}, {"no": 42, "spk": "345/PPNKI1100/2026", "uraian": "Pembelian Reklame HSSE", "bagian": "Safety", "nilai": 34780000.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}, {"no": 43, "spk": "169/PPNKI1100/2026-S7", "uraian": "Pembelian Timbangan Kegiatan Medical", "bagian": "health", "nilai": 8800000.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}, {"no": 44, "spk": "VSO-2026-09-22-062574613", "uraian": "Perbaikan Ruang Control Room Fire Station", "bagian": "Emergency & Insurance", "nilai": 68782251.0, "bulan": "Sept", "tahun": 2026, "ket": "On Going"}];
+
+        let filteredData = [...rawData];
+
+        function formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(number);
+        }
+
+        function initDashboard() {
+            // Populate KPI
+            document.getElementById('kpi-total-item').innerText = rawData.length;
+            const totalNilai = rawData.reduce((sum, item) => sum + item.nilai, 0);
+            document.getElementById('kpi-total-nilai').innerText = formatRupiah(totalNilai);
+            
+            const ongoingCount = rawData.filter(i => i.ket.toLowerCase().includes('on going')).length;
+            document.getElementById('kpi-ongoing').innerText = ongoingCount;
+
+            const teraCount = rawData.filter(i => i.ket.toLowerCase().includes('tera ulang')).length;
+            document.getElementById('kpi-tera').innerText = teraCount;
+
+            // Populate KET Filter Dropdown
+            const uniqueKet = [...new Set(rawData.map(i => i.ket))].sort();
+            const selectEl = document.getElementById('ketFilter');
+            uniqueKet.forEach(ket => {
+                const opt = document.createElement('option');
+                opt.value = ket;
+                opt.innerText = ket;
+                selectEl.appendChild(opt);
+            });
+
+            renderTable(rawData);
+            renderCharts(rawData);
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">Tidak ada data yang ditemukan.</td></tr>`;
+                document.getElementById('tableInfo').innerText = 'Menampilkan 0 data';
+                return;
+            }
+
+            data.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-white hover:bg-slate-50 transition' : 'bg-slate-50/50 hover:bg-slate-50 transition';
+                
+                // Badge color based on status
+                let badgeClass = 'bg-blue-100 text-blue-700';
+                const kLower = item.ket.toLowerCase();
+                if (kLower.includes('on going')) badgeClass = 'bg-amber-100 text-amber-700';
+                else if (kLower.includes('tera ulang')) badgeClass = 'bg-emerald-100 text-emerald-700';
+                else if (kLower.includes('instalasi')) badgeClass = 'bg-indigo-100 text-indigo-700';
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 text-center font-medium text-slate-500">${index + 1}</td>
+                    <td class="py-3 px-4 font-medium text-slate-700">${item.spk}</td>
+                    <td class="py-3 px-4 font-medium text-slate-900 max-w-xs truncate" title="${item.uraian}">${item.uraian}</td>
+                    <td class="py-3 px-4">${item.bagian}</td>
+                    <td class="py-3 px-4 text-right font-semibold text-slate-700">${formatRupiah(item.nilai)}</td>
+                    <td class="py-3 px-4 text-center">${item.bulan}</td>
+                    <td class="py-3 px-4 text-center">${item.tahun}</td>
+                    <td class="py-3 px-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${badgeClass}">${item.ket}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('tableInfo').innerText = `Menampilkan ${data.length} dari ${rawData.length} data`;
+        }
+
+        function filterTable() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const selectedKet = document.getElementById('ketFilter').value;
+
+            filteredData = rawData.filter(item => {
+                const matchSearch = item.uraian.toLowerCase().includes(searchText) || item.spk.toLowerCase().includes(searchText) || item.bagian.toLowerCase().includes(searchText);
+                const matchKet = selectedKet === '' || item.ket === selectedKet;
+                return matchSearch && matchKet;
+            });
+
+            renderTable(filteredData);
+        }
+
+        let barChartInstance = null;
+        let doughnutChartInstance = null;
+
+        function renderCharts(data) {
+            // Aggregate data by KET
+            const summaryMap = {};
+            data.forEach(item => {
+                if (!summaryMap[item.ket]) {
+                    summaryMap[item.ket] = { count: 0, nilai: 0 };
+                }
+                summaryMap[item.ket].count += 1;
+                summaryMap[item.ket].nilai += item.nilai;
+            });
+
+            // Sort by nilai descending
+            const sortedKeys = Object.keys(summaryMap).sort((a, b) => summaryMap[b].nilai - summaryMap[a].nilai);
+            const labels = sortedKeys;
+            const nilaiData = sortedKeys.map(k => summaryMap[k].nilai);
+            const countData = sortedKeys.map(k => summaryMap[k].count);
+
+            // Bar Chart (Total Nilai)
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            if (barChartInstance) barChartInstance.destroy();
+
+            barChartInstance = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Nilai (Rp)',
+                        data: nilaiData,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' Nilai: ' + formatRupiah(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    if (value >= 1e9) return (value / 1e9).toFixed(1) + ' M';
+                                    if (value >= 1e6) return (value / 1e6).toFixed(0) + ' Jt';
+                                    return value;
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: { font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+
+            // Doughnut Chart (Jumlah Item)
+            const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+            if (doughnutChartInstance) doughnutChartInstance.destroy();
+
+            const backgroundColors = [
+                '#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#64748b'
+            ];
+
+            doughnutChartInstance = new Chart(ctxDoughnut, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: countData,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "No,No SPK,Uraian,Bagian,Nilai,Bulan,Tahun,Keterangan\n";
+            
+            filteredData.forEach(item => {
+                let row = [item.no, `"${item.spk}"`, `"${item.uraian.replace(/"/g, '""')}"`, `"${item.bagian}"`, item.nilai, `"${item.bulan}"`, item.tahun, `"${item.ket}"`];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "dashboard_bdm_mig_filtered.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.onload = initDashboard;
+    </script>
+</body>
+</html>
